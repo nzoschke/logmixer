@@ -12,10 +12,13 @@ class TestIO < MiniTest::Unit::TestCase
   end
 
   def test_input
-    io = @l.input :tcp, ["nc", "-l", "6969"]
+    io = @l.output :string, StringIO.new
+
+    @l.input :tcp, ["nc", "-l", "6969"]
     IO.popen(["nc", "127.0.0.1", "6969"], "w+") { |io| io.puts "test" }
 
-    assert_equal "test\n", io.readpartial(64)
+    io.rewind
+    assert_equal "[\"test\\n\"]\n", io.readpartial(64)
   end
 
   def test_output_file

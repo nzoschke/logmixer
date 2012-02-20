@@ -13,8 +13,13 @@ class LogMixer
 
   def input(id, dev, opts={})
     # register IO object and spawn threaded reader
-    opts.merge!(mode: "r")
-    output(id, dev, opts)
+    io = output(id, dev, opts.merge(mode: "r"))
+
+    Thread.new do
+      log io.readline while true
+    end
+
+    io
   end
 
   def output(id, dev, opts={})
