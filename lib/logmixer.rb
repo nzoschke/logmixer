@@ -6,8 +6,9 @@ class LogMixer
   end
 
   def log(*datas)
+    data = datas.inject(:merge)
     @channels.each do |id, io|
-      io.puts datas.inspect
+      io.puts data.unparse
     end
   end
 
@@ -16,7 +17,7 @@ class LogMixer
     io = output(id, dev, opts.merge(mode: "r"))
 
     Thread.new do
-      log io.readline while true
+      log io.readline.parse while true
     end
 
     io

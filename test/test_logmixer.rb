@@ -28,7 +28,7 @@ class TestIO < MiniTest::Unit::TestCase
     IO.popen(["nc", "127.0.0.1", "6969"], "w+") { |io| io.puts "test" }
 
     io.rewind
-    assert_equal "[\"test\\n\"]\n", io.readpartial(64)
+    assert_equal "test\n", io.readpartial(64)
   end
 
   def test_output_file
@@ -36,7 +36,7 @@ class TestIO < MiniTest::Unit::TestCase
     @l.log(test: true)
 
     io.rewind
-    assert_equal "[{:test=>true}]\n", io.read
+    assert_equal "test\n", io.read
   end
 
   def test_output_io
@@ -44,13 +44,13 @@ class TestIO < MiniTest::Unit::TestCase
     @l.log(test: true)
 
     io.rewind
-    assert_equal "[{:test=>true}]\n", io.read
+    assert_equal "test\n", io.read
   end
 
   def test_output_popen
     io = @l.output :cat, ["cat"], mode: "w+"
     @l.log(test: true)
 
-    assert_equal "[{:test=>true}]\n", io.readpartial(64)
+    assert_equal "test\n", io.readpartial(64)
   end
 end
