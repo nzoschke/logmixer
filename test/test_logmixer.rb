@@ -12,6 +12,7 @@ class TestIO < MiniTest::Unit::TestCase
   end
 
   def test_input
+    @l.input :tcp, ["nc", "-l", "localhost", "5000"]
   end
 
   def test_output_file

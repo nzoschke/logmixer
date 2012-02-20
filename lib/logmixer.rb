@@ -5,10 +5,6 @@ class LogMixer
     @mtx      = Mutex.new
   end
 
-  def close
-    @channels.each { |id, io| io.close unless [STDERR, STDOUT].include? io }
-  end
-
   def log(*datas)
     @channels.each do |id, io|
       io.puts datas.inspect
@@ -40,5 +36,17 @@ class LogMixer
   end
 
   def write(id, str)
+  end
+
+  def close
+    @channels.each do |id, io|
+      next if [STDERR, STDOUT].include? io
+
+      if pid = io.pid
+        Process.kill "TERM", pid
+        Process.wait pid
+      end
+      io.close
+    end
   end
 end
