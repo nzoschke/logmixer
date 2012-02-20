@@ -15,21 +15,25 @@ class TestIO < MiniTest::Unit::TestCase
   end
 
   def test_output_file
-    path = "log/test"
-    @l.output :messages, path, mode: "w"
+    io = @l.output :messages, "log/test", mode: "w+"
     @l.log(test: true)
 
-    assert File.exists?(path)
-    assert_equal "[{:test=>true}]\n", File.read(path)
+    io.rewind
+    assert_equal "[{:test=>true}]\n", io.read
   end
 
   def test_output_io
-    @l.output :stdout, STDOUT
+    io = @l.output :string, StringIO.new
     @l.log(test: true)
+
+    io.rewind
+    assert_equal "[{:test=>true}]\n", io.read
   end
 
   def test_output_popen
-    @l.output :syslog, ["logger"]
+    io = @l.output :cat, ["cat"], mode: "w+"
     @l.log(test: true)
+
+    assert_equal "[{:test=>true}]\n", io.readpartial(64)
   end
 end
