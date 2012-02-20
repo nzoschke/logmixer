@@ -56,3 +56,33 @@ class LogMixer
     end
   end
 end
+
+class Hash
+  def unparse
+    self.map do |(k, v)|
+      if (v == true)
+        k.to_s
+      elsif (v == false)
+        "#{k}=false"
+      elsif (v.is_a?(String) && v.include?("\""))
+        "#{k}='#{v}'"
+      elsif (v.is_a?(String) && (v !~ /^[a-zA-Z0-9\:\.\-\_]+$/))
+        "#{k}=\"#{v}\""
+      elsif (v.is_a?(String) || v.is_a?(Symbol))
+        "#{k}=#{v}"
+      elsif v.is_a?(Float)
+        "#{k}=#{format("%.3f", v)}"
+      elsif v.is_a?(Numeric) || v.is_a?(Class) || v.is_a?(Module)
+        "#{k}=#{v}"
+      end
+    end.compact.join(" ")
+  end
+end
+
+class String
+  def parse
+    data = {}
+    self.split.each { |w| data[w.to_sym] = true }
+    data
+  end
+end

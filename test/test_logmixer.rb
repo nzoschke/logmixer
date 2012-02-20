@@ -3,6 +3,16 @@ require "./lib/logmixer"
 require "./test/minitest_helper.rb"
 
 class TestIO < MiniTest::Unit::TestCase
+  def test_unparse
+    assert_equal "test", {test: true}.unparse
+  end
+
+  def test_parse
+    assert_equal({test: true}, "test".parse)
+  end
+end
+
+class TestIO < MiniTest::Unit::TestCase
   def setup
     @l = LogMixer.new
   end
