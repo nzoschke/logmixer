@@ -77,4 +77,28 @@ class TestFilter < MiniTest::Unit::TestCase
 
     assert_equal([{ :test => true }], @l.filters[:all][:buffer])
   end
+
+  def test_filter
+    @l.filter :exceptions do |log|
+      log[:exception]
+    end
+
+    @l.log(test: true)
+    @l.log(exception: true)
+
+    assert_equal([{ :exception => true }], @l.filters[:exceptions][:buffer])
+  end
+
+  def test_filter_match
+    @l.filter :completed do |log|
+      log.match(exec: true, at: /finish|error/)
+    end
+
+    @l.log(exec: true, at: :start)
+    @l.log(exec: true, at: :finish)
+    @l.log(exec: true, at: :start)
+    @l.log(exec: true, at: :error)
+
+    assert_equal 2, @l.filters[:completed][:buffer].length
+  end
 end

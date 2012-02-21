@@ -13,21 +13,21 @@ class LogMixer
     data = datas.inject(:merge)
 
     @filters.each do |id, opts|
-      buffer = opts[:buffer]
-      block  = opts[:block]
+      buffer  = opts[:buffer]
+      blk     = opts[:blk]
 
-      if !block
+      args = [[], [data], [data, buffer]]
+
+      if blk.call(*args[blk.arity])
         buffer << data
-      end
 
-      next if !@sends[id]
+        next if !@sends[id]
+        @sends[id].each do |opts|
+          cond    = opts[:cond]
+          blk     = opts[:blk]
 
-      @sends[id].each do |opts|
-        cond    = opts[:cond]
-        blk     = opts[:blk]
-
-        args = [[], [buffer.last], [buffer.last, buffer]]
-        blk.call(*args[blk.arity]) if cond.call(*args[cond.arity])
+          blk.call(*args[blk.arity]) if cond.call(*args[cond.arity])
+        end
       end
     end
   end
@@ -54,6 +54,7 @@ class LogMixer
   end
 
   def filter(id, period=nil, &blk)
+    blk ||= lambda { true }
     @filters[id] = { period: period, blk: blk, buffer: [] }
   end
 
@@ -88,6 +89,20 @@ class LogMixer
 end
 
 class Hash
+  def match(h)
+    return false if keys & h.keys != h.keys
+
+    h.each do |k, v|
+      if v.is_a? Regexp
+        return false if !v.match(self[k].to_s)
+      else
+        return false if self[k] != v
+      end
+    end
+
+    return true
+  end
+
   def unparse
     self.map do |(k, v)|
       if (v == true)
