@@ -1,14 +1,32 @@
 class LogMixer
+  attr_reader :filters
+
   def initialize
     @channels = {}
     @filters  = {}
+    @sends    = {}
+
     @mtx      = Mutex.new
   end
 
   def log(*datas)
     data = datas.inject(:merge)
-    @channels.each do |id, io|
-      io.puts data.unparse
+
+    @filters.each do |id, opts|
+      buffer = opts[:buffer]
+      block  = opts[:block]
+
+      if !block
+        buffer << data
+      end
+
+      @sends[id].each do |opts|
+        cond    = opts[:cond]
+        blk     = opts[:blk]
+
+        args = [[], [buffer.last], [buffer.last, buffer]]
+        blk.call(*args[blk.arity]) if cond.call(*args[cond.arity])
+      end
     end
   end
 
@@ -34,15 +52,24 @@ class LogMixer
   end
 
   def filter(id, period=nil, &blk)
+    @filters[id] = { period: period, blk: blk, buffer: [] }
   end
 
-  def send(ids, period=nil, &blk)
+  def send(ids, cond=nil, &blk)
+    ids = [ids] if !ids.is_a?(Array)
+    cond ||= lambda { true }
+
+    ids.each do |id|
+      @sends[id] ||= []
+      @sends[id] << { cond: cond, blk: blk }
+    end
   end
 
   def receive(ids, period=nil, &blk)
   end
 
   def write(id, str)
+    @channels[id].puts str
   end
 
   def close

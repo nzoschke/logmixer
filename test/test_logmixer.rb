@@ -15,6 +15,8 @@ end
 class TestIO < MiniTest::Unit::TestCase
   def setup
     @l = LogMixer.new
+    @l.filter(:all)
+    @l.send(:all) { |log| @l.write :out, log.unparse }
   end
 
   def teardown
@@ -22,7 +24,7 @@ class TestIO < MiniTest::Unit::TestCase
   end
 
   def test_input
-    io = @l.output :string, StringIO.new
+    io = @l.output :out, StringIO.new
 
     @l.input :tcp, ["nc", "-l", "6969"]
     IO.popen(["nc", "127.0.0.1", "6969"], "w+") { |io| io.puts "test" }
@@ -32,7 +34,7 @@ class TestIO < MiniTest::Unit::TestCase
   end
 
   def test_output_file
-    io = @l.output :messages, "log/test", mode: "w+"
+    io = @l.output :out, "log/test", mode: "w+"
     @l.log(test: true)
 
     io.rewind
@@ -40,7 +42,7 @@ class TestIO < MiniTest::Unit::TestCase
   end
 
   def test_output_io
-    io = @l.output :string, StringIO.new
+    io = @l.output :out, StringIO.new
     @l.log(test: true)
 
     io.rewind
@@ -48,9 +50,29 @@ class TestIO < MiniTest::Unit::TestCase
   end
 
   def test_output_popen
-    io = @l.output :cat, ["cat"], mode: "w+"
+    io = @l.output :out, ["cat"], mode: "w+"
     @l.log(test: true)
 
     assert_equal "test\n", io.readpartial(64)
+  end
+end
+
+class TestFilter < MiniTest::Unit::TestCase
+  def setup
+    @l = LogMixer.new
+  end
+
+  def teardown
+    @l.close
+  end
+
+  def test_empty
+    @l.log(test: true)
+    assert_equal({}, @l.filters)
+  end
+
+  def test_filter_all
+    @l.filter :all
+    assert @l.filters[:all]
   end
 end
