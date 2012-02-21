@@ -71,8 +71,10 @@ class TestFilter < MiniTest::Unit::TestCase
     assert_equal({}, @l.filters)
   end
 
-  def test_filter_all
+  def test_copy
     @l.filter :all
-    assert @l.filters[:all]
+    @l.log(test: true)
+
+    assert_equal([{ :test => true }], @l.filters[:all][:buffer])
   end
 end

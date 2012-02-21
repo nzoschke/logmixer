@@ -20,6 +20,8 @@ class LogMixer
         buffer << data
       end
 
+      next if !@sends[id]
+
       @sends[id].each do |opts|
         cond    = opts[:cond]
         blk     = opts[:blk]
