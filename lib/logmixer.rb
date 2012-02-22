@@ -11,12 +11,14 @@ class LogMixer
 
   def log(*datas)
     data = datas.inject(:merge)
+    data[:__time] ||= Time.now.to_f
 
     @filters.each do |id, opts|
-      buffer  = opts[:buffer]
       blk     = opts[:blk]
+      buffer  = opts[:buffer]
+      period  = opts[:period]
 
-      args = [[], [data], [data, buffer]]
+      args = [[], [data], [buffer, data]]
 
       if blk.call(*args[blk.arity])
         buffer << data
@@ -37,7 +39,7 @@ class LogMixer
     io = output(id, dev, opts.merge(mode: "r"))
 
     Thread.new do
-      log io.readline.parse while true
+      log io.readline.strip.parse while true
     end
 
     io
@@ -126,8 +128,28 @@ end
 
 class String
   def parse
-    data = {}
-    self.split.each { |w| data[w.to_sym] = true }
-    data
+    data      = {}
+    patterns  = [/([^ =]+)='(.*?)'/, /([^ =]+)="(.*?)"/, /([^ =]+)=([^ =]+)/]
+    s         = self.dup
+
+    patterns.each do |pattern|
+      s.scan(pattern).each do |match|
+        v = match[1]
+
+        if v.to_i.to_s == v
+          v = v.to_i
+        elsif format("%.3f", v.to_f) == v
+          v = v.to_f
+        end
+
+        data[match[0].to_sym] = v
+      end
+      s.gsub!(pattern, "")
+    end
+
+    tags = {}
+    s.split.each { |w| tags[w.to_sym] = true }
+
+    tags.update(data)
   end
 end
