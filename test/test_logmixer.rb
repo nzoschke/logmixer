@@ -2,17 +2,22 @@ require "minitest/autorun"
 require "./lib/logmixer"
 require "./test/minitest_helper.rb"
 
-class TestIO < MiniTest::Unit::TestCase
-  def test_unparse
-    assert_equal "test", { test: true }.unparse
+class TestParser < MiniTest::Unit::TestCase
+  def test_parse_tags
+    data = { test: true, exec: true }
+    assert_equal "test exec", data.unparse
+    assert_equal data, data.unparse.parse
   end
 
-  def test_parse
-    assert_equal({ test: true }, "test".parse)
+  def test_parse_numbers
+    data = { elapsed: 12.000000, __time: 0 }
+    assert_equal "elapsed=12.000 __time=0", data.unparse
+    assert_equal data, data.unparse.parse
   end
 
-  def test_parse_values
-    data = { exec: true, elapsed: 12.1, cmd: 'echo \'hello\' "world"', chars: "hello world", __time: 0 }
+  def test_parse_strings
+    data = { s1: 'echo \'hello\' "world"', s2: "hello world", s3: "slasher\\" }
+    assert_equal "s1='echo \\'hello\\' \"world\"' s2='hello world' s3='slasher\\\\'", data.unparse
     assert_equal data, data.unparse.parse
   end
 end

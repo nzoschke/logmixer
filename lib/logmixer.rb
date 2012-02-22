@@ -111,8 +111,9 @@ class Hash
         k.to_s
       elsif (v == false)
         "#{k}=false"
-      elsif v.is_a?(String) && v =~ /[' ]/
-        "#{k}='" + v.gsub(/\\|'/) { |c| "\\#{c}" } + "'"
+      elsif v.is_a?(String) && v =~ /[\\' ]/  # escape and quote val with ' or \ or multiple words
+        v = v.gsub(/\\|'/) { |c| "\\#{c}" }
+        "#{k}='#{v}'"
       elsif v.is_a?(Float)
         "#{k}=#{format("%.3f", v)}"
       else
@@ -127,12 +128,17 @@ class String
     vals  = {}
     s     = self.dup
 
-    patterns = [/([^= ]+)='([^'\\]*(\\.[^'\\]*)*)'/, /([^= ]+)=([^ =]+)/]
+    patterns = [
+      /([^= ]+)='([^'\\]*(\\.[^'\\]*)*)'/,    # key='\'c-string\' escaped val'
+      /([^= ]+)=([^ =]+)/                     # key=value
+    ]
     patterns.each do |p|
       s.scan(p) do |match|
-        v = match[1].gsub(/\\/, "")
+        v = match[1]
+        v.gsub!(/\\'/, "'")                   # unescape \'
+        v.gsub!(/\\\\/, "\\")                 # unescape \\
 
-        if v.to_i.to_s == v
+        if v.to_i.to_s == v                   # cast value to int or float
           v = v.to_i
         elsif format("%.3f", v.to_f) == v
           v = v.to_f
@@ -140,9 +146,10 @@ class String
 
         vals[match[0]] = v
       end
-      s.gsub!(p, "\\1")
+      s.gsub!(p, "\\1")                     # sub value, leaving keys in order
     end
 
+    # rebuild in-order key: value hash
     s.split.inject({}) do |h, k|
       h[k.to_sym] = vals[k] || true
       h
