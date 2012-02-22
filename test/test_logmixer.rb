@@ -12,7 +12,7 @@ class TestIO < MiniTest::Unit::TestCase
   end
 
   def test_parse_values
-    data = { exec: true, elapsed: 12.1, cmd: 'echo "hello"', __time: 0 }
+    data = { exec: true, elapsed: 12.1, cmd: 'echo \'hello\' "world"', chars: "hello world", __time: 0 }
     assert_equal data, data.unparse.parse
   end
 end

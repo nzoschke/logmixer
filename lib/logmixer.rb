@@ -111,15 +111,11 @@ class Hash
         k.to_s
       elsif (v == false)
         "#{k}=false"
-      elsif (v.is_a?(String) && v.include?("\""))
-        "#{k}='#{v}'"
-      elsif (v.is_a?(String) && (v !~ /^[a-zA-Z0-9\:\.\-\_]+$/))
-        "#{k}=\"#{v}\""
-      elsif (v.is_a?(String) || v.is_a?(Symbol))
-        "#{k}=#{v}"
+      elsif v.is_a?(String) && v =~ /[' ]/
+        "#{k}='" + v.gsub(/\\|'/) { |c| "\\#{c}" } + "'"
       elsif v.is_a?(Float)
         "#{k}=#{format("%.3f", v)}"
-      elsif v.is_a?(Numeric) || v.is_a?(Class) || v.is_a?(Module)
+      else
         "#{k}=#{v}"
       end
     end.compact.join(" ")
@@ -128,13 +124,13 @@ end
 
 class String
   def parse
-    data      = {}
-    patterns  = [/([^ =]+)='(.*?)'/, /([^ =]+)="(.*?)"/, /([^ =]+)=([^ =]+)/]
-    s         = self.dup
+    vals  = {}
+    s     = self.dup
 
-    patterns.each do |pattern|
-      s.scan(pattern).each do |match|
-        v = match[1]
+    patterns = [/([^= ]+)='([^'\\]*(\\.[^'\\]*)*)'/, /([^= ]+)=([^ =]+)/]
+    patterns.each do |p|
+      s.scan(p) do |match|
+        v = match[1].gsub(/\\/, "")
 
         if v.to_i.to_s == v
           v = v.to_i
@@ -142,14 +138,14 @@ class String
           v = v.to_f
         end
 
-        data[match[0].to_sym] = v
+        vals[match[0]] = v
       end
-      s.gsub!(pattern, "")
+      s.gsub!(p, "\\1")
     end
 
-    tags = {}
-    s.split.each { |w| tags[w.to_sym] = true }
-
-    tags.update(data)
+    s.split.inject({}) do |h, k|
+      h[k.to_sym] = vals[k] || true
+      h
+    end
   end
 end
