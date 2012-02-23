@@ -18,17 +18,31 @@ class LogMixer
       buffer  = opts[:buffer]
       period  = opts[:period]
 
-      args = [[], [data], [buffer, data]]
+      bin = (data[:__time] / period.to_f).floor rescue -1
 
-      if blk.call(*args[blk.arity])
-        buffer << data
+      acc = buffer.last || {}                           # use current accumulator
+      if acc[:__bin] != bin                             # or create new one
+        acc = {}
+      end
+
+      args = [[], [data], [acc, data]]
+      if new_acc = blk.call(*args[blk.arity])
+        if blk.arity == 2
+          buffer << acc if buffer.last != acc           # append new accumulator
+          acc.merge! new_acc                            # update with block's return
+          acc.merge!(__time: data[:__time], __bin: bin)
+        else
+          buffer << data
+        end
 
         next if !@sends[id]
+
+        send_args = [[], [data], [buffer, data]]
         @sends[id].each do |opts|
           cond    = opts[:cond]
           blk     = opts[:blk]
 
-          blk.call(*args[blk.arity]) if cond.call(*args[cond.arity])
+          blk.call(*send_args[blk.arity]) if cond.call(*send_args[cond.arity])
         end
       end
     end
@@ -146,7 +160,7 @@ class String
 
         vals[match[0]] = v
       end
-      s.gsub!(p, "\\1")                     # sub value, leaving keys in order
+      s.gsub!(p, "\\1")                       # sub value, leaving keys in order
     end
 
     # rebuild in-order key: value hash

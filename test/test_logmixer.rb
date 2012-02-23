@@ -116,4 +116,27 @@ class TestFilter < MiniTest::Unit::TestCase
 
     assert_equal 2, @l.filters[:completed][:buffer].length
   end
+
+  def test_filter_reduce
+    @l.filter :execs_per_min, 60 do |acc, log|
+      next unless log.match(exec: true, at: :start)
+      acc[:execs_per_min] = true
+      acc[:num] ||= 0
+      acc[:num]  += 1
+      acc
+    end
+
+    @l.log(exec: true, at: :start,   __time: 0)
+    @l.log(exec: true, at: :finish,  __time: 1)
+    @l.log(tick: true,               __time: 1)
+    @l.log(exec: true, at: :start,   __time: 2)
+    @l.log(exec: true, at: :error,   __time: 3)
+    @l.log(exec: true, at: :start,   __time: 60)
+    @l.log(exec: true, at: :finish,  __time: 61)
+
+    assert_equal [
+      { execs_per_min: true, num: 2, __time: 2,  __bin: 0 },
+      { execs_per_min: true, num: 1, __time: 60, __bin: 1 }
+    ], @l.filters[:execs_per_min][:buffer]
+  end
 end
