@@ -39,6 +39,8 @@ class TestIO < MiniTest::Unit::TestCase
 
   def test_input
     io = @l.output :out, StringIO.new
+    @l.receive(:tcp) { |msg| @l.write :out, msg }
+
 
     @l.input :tcp, ["nc", "-l", "6969"]
     IO.popen(["nc", "127.0.0.1", "6969"], "w+") { |io| io.puts "test __time=0" }

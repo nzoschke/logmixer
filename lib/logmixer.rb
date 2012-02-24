@@ -8,6 +8,7 @@ module LogMixer
       @channels = {}
       @filters  = {}
       @sends    = {}
+      @receives = {}
 
       @mtx      = Mutex.new
     end
@@ -56,7 +57,16 @@ module LogMixer
       io = output(id, dev, opts.merge(mode: "r"))
 
       Thread.new do
-        log io.readline.strip.parse while true
+        while true
+          msg =  io.readline.strip
+
+          @receives[id].each do |opts|
+            cond    = opts[:cond]
+            blk     = opts[:blk]
+
+            blk.call(msg)
+          end
+        end
       end
 
       io
@@ -87,7 +97,14 @@ module LogMixer
       end
     end
 
-    def receive(ids, period=nil, &blk)
+    def receive(ids, cond=nil, &blk)
+      ids = [ids] if !ids.is_a?(Array)
+      cond ||= lambda { true }
+
+      ids.each do |id|
+        @receives[id] ||= []
+        @receives[id] << { cond: cond, blk: blk }
+      end
     end
 
     def write(id, str)
