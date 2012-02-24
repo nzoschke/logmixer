@@ -16,13 +16,15 @@ class TestParser < MiniTest::Unit::TestCase
   end
 
   def test_parse_strings
-    data = { s1: 'echo \'hello\' "world"', s2: "hello world", s3: "slasher\\" }
-    assert_equal "s1='echo \\'hello\\' \"world\"' s2='hello world' s3='slasher\\\\'", data.unparse
+    data = { s1: 'echo \'hello\' "world"', s2: "hello world", s3: "slasher\\", s4: "hi" }
+    assert_equal "s1='echo \\'hello\\' \"world\"' s2='hello world' s3='slasher\\\\' s4='hi'", data.unparse
     assert_equal data, data.unparse.parse
   end
 end
 
 class TestIO < MiniTest::Unit::TestCase
+  include LogMixer
+
   def setup
     @l = LogMixer.new
     @l.filter(:all)
@@ -70,6 +72,8 @@ class TestIO < MiniTest::Unit::TestCase
 end
 
 class TestFilter < MiniTest::Unit::TestCase
+  include LogMixer
+
   def setup
     @l = LogMixer.new
   end

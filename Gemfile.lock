@@ -1,3 +1,8 @@
+PATH
+  remote: .
+  specs:
+    logmixer (0.0.1)
+
 GEM
   remote: http://rubygems.org/
   specs:
@@ -10,5 +15,6 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  logmixer!
   minitest
   turn

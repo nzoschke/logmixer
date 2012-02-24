@@ -1,105 +1,109 @@
-class LogMixer
-  attr_reader :filters
+require "logmixer/version"
 
-  def initialize
-    @channels = {}
-    @filters  = {}
-    @sends    = {}
+module LogMixer
+  class LogMixer
+    attr_reader :filters
 
-    @mtx      = Mutex.new
-  end
+    def initialize
+      @channels = {}
+      @filters  = {}
+      @sends    = {}
 
-  def log(*datas)
-    data = datas.inject(:merge)
-    data[:__time] ||= Time.now.to_f
+      @mtx      = Mutex.new
+    end
 
-    @filters.each do |id, opts|
-      blk     = opts[:blk]
-      buffer  = opts[:buffer]
-      period  = opts[:period]
+    def log(*datas)
+      data = datas.inject(:merge)
+      data[:__time] ||= Time.now.to_f
 
-      bin = (data[:__time] / period.to_f).floor rescue -1
+      @filters.each do |id, opts|
+        blk     = opts[:blk]
+        buffer  = opts[:buffer]
+        period  = opts[:period]
 
-      acc = buffer.detect { |d| d[:__bin] == bin }      # find accumulator
+        bin = (data[:__time] / period.to_f).floor rescue -1
 
-      args = [[], [data], [acc || { id => true }, data]]
-      if new_acc = blk.call(*args[blk.arity])           # update accumulator
-        if blk.arity == 2
-          buffer << new_acc if acc.nil?                 # append if new accumulator
+        acc = buffer.detect { |d| d[:__bin] == bin }      # find accumulator
 
-          new_acc.merge!(
-            __time: data[:__time],
-            __bin:  bin
-          )
-        else
-          buffer << data
-        end
+        args = [[], [data], [acc || { id => true }, data]]
+        if new_acc = blk.call(*args[blk.arity])           # update accumulator
+          if blk.arity == 2
+            buffer << new_acc if acc.nil?                 # append if new accumulator
 
-        next if !@sends[id]
+            new_acc.merge!(
+              __time: data[:__time],
+              __bin:  bin
+            )
+          else
+            buffer << data
+          end
 
-        send_args = [[], [data], [buffer, data]]
-        @sends[id].each do |opts|
-          cond    = opts[:cond]
-          blk     = opts[:blk]
+          next if !@sends[id]
 
-          blk.call(*send_args[blk.arity]) if cond.call(*send_args[cond.arity])
+          send_args = [[], [data], [buffer, data]]
+          @sends[id].each do |opts|
+            cond    = opts[:cond]
+            blk     = opts[:blk]
+
+            blk.call(*send_args[blk.arity]) if cond.call(*send_args[cond.arity])
+          end
         end
       end
     end
-  end
 
-  def input(id, dev, opts={})
-    # register IO object and spawn threaded reader
-    io = output(id, dev, opts.merge(mode: "r"))
+    def input(id, dev, opts={})
+      # register IO object and spawn threaded reader
+      io = output(id, dev, opts.merge(mode: "r"))
 
-    Thread.new do
-      log io.readline.strip.parse while true
-    end
-
-    io
-  end
-
-  def output(id, dev, opts={})
-    if dev.is_a? Array
-      dev = IO.popen(dev, mode=opts[:mode] || "w")
-    elsif dev.is_a? String
-      dev = File.open(dev, mode=opts[:mode] || "a")
-    end
-    dev.sync = true
-    @channels[id] = dev
-  end
-
-  def filter(id, period=nil, &blk)
-    blk ||= lambda { true }
-    @filters[id] = { period: period, blk: blk, buffer: [] }
-  end
-
-  def send(ids, cond=nil, &blk)
-    ids = [ids] if !ids.is_a?(Array)
-    cond ||= lambda { true }
-
-    ids.each do |id|
-      @sends[id] ||= []
-      @sends[id] << { cond: cond, blk: blk }
-    end
-  end
-
-  def receive(ids, period=nil, &blk)
-  end
-
-  def write(id, str)
-    @channels[id].puts str
-  end
-
-  def close
-    @channels.each do |id, io|
-      next if [STDERR, STDOUT].include? io
-
-      if pid = io.pid
-        Process.kill "TERM", pid
-        Process.wait pid
+      Thread.new do
+        log io.readline.strip.parse while true
       end
-      io.close
+
+      io
+    end
+
+    def output(id, dev, opts={})
+      if dev.is_a? Array
+        dev = IO.popen(dev, mode=opts[:mode] || "w")
+      elsif dev.is_a? String
+        dev = File.open(dev, mode=opts[:mode] || "a")
+      end
+      dev.sync = true
+      @channels[id] = dev
+    end
+
+    def filter(id, period=nil, &blk)
+      blk ||= lambda { true }
+      @filters[id] = { period: period, blk: blk, buffer: [] }
+    end
+
+    def send(ids, cond=nil, &blk)
+      ids = [ids] if !ids.is_a?(Array)
+      cond ||= lambda { true }
+
+      ids.each do |id|
+        @sends[id] ||= []
+        @sends[id] << { cond: cond, blk: blk }
+      end
+    end
+
+    def receive(ids, period=nil, &blk)
+    end
+
+    def write(id, str)
+      @channels[id].puts str
+    end
+
+    def close
+      @channels.each do |id, io|
+        next if [STDERR, STDOUT].include? io
+
+        if pid = io.pid
+          Process.kill "TERM", pid
+          Process.wait pid
+        end
+        io.close
+      end
     end
   end
 end
@@ -125,7 +129,7 @@ class Hash
         k.to_s
       elsif (v == false)
         "#{k}=false"
-      elsif v.is_a?(String) && v =~ /[\\' ]/  # escape and quote val with ' or \ or multiple words
+      elsif v.is_a?(String)     # escape and quote val with ' or \ or multiple words
         v = v.gsub(/\\|'/) { |c| "\\#{c}" }
         "#{k}='#{v}'"
       elsif v.is_a?(Float)
