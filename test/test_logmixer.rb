@@ -139,4 +139,44 @@ class TestFilter < MiniTest::Unit::TestCase
       { execs_per_min: true, num: 1, __time: 60, __bin: 1 }
     ], @l.filters[:execs_per_min][:buffer]
   end
+
+  def test_rereduce
+    @l1 = LogMixer.new
+    @l2 = LogMixer.new
+    @l3 = LogMixer.new
+
+    send = lambda { |data| @l3.log data }
+
+    filter = Proc.new do |acc, data|
+      next unless data.match(exec: true, at: :start) || data.match(execs_per_min: true)
+      acc[:num] ||= 0
+      acc[:num]  += data[:num] || 1
+      acc
+    end
+
+    @l1.filter :execs_per_min, 60, &filter
+    @l1.send(:execs_per_min, &send)
+
+    @l2.filter :execs_per_min, 60, &filter
+    @l2.send(:execs_per_min, &send)
+
+    @l3.filter :execs_per_min, 60, &filter
+
+    @l1.log(exec: true, at: :start,   __time: 0)
+    @l1.log(exec: true, at: :finish,  __time: 1)
+    @l1.log(exec: true, at: :start,   __time: 60)
+    @l1.log(exec: true, at: :finish,  __time: 61)
+
+    @l2.log(exec: true, at: :start,   __time: 10)
+    @l2.log(exec: true, at: :finish,  __time: 12)
+    @l2.log(exec: true, at: :start,   __time: 125)
+    @l2.log(exec: true, at: :finish,  __time: 126)
+
+    assert_equal 2, @l1.filters[:execs_per_min][:buffer].length
+    assert_equal 2, @l2.filters[:execs_per_min][:buffer].length
+
+    buffer = @l3.filters[:execs_per_min][:buffer]
+    assert_equal [0, 1, 2], buffer.collect { |d| d[:__bin] }
+    assert_equal [2, 1, 1], buffer.collect { |d| d[:num] }
+  end
 end

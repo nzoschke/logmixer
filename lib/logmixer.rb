@@ -20,17 +20,17 @@ class LogMixer
 
       bin = (data[:__time] / period.to_f).floor rescue -1
 
-      acc = buffer.last || {}                           # use current accumulator
-      if acc[:__bin] != bin                             # or create new one
-        acc = {}
-      end
+      acc = buffer.detect { |d| d[:__bin] == bin }      # find accumulator
 
-      args = [[], [data], [acc, data]]
-      if new_acc = blk.call(*args[blk.arity])
+      args = [[], [data], [acc || { id => true }, data]]
+      if new_acc = blk.call(*args[blk.arity])           # update accumulator
         if blk.arity == 2
-          buffer << acc if buffer.last != acc           # append new accumulator
-          acc.merge! new_acc                            # update with block's return
-          acc.merge!(__time: data[:__time], __bin: bin)
+          buffer << new_acc if acc.nil?                 # append if new accumulator
+
+          new_acc.merge!(
+            __time: data[:__time],
+            __bin:  bin
+          )
         else
           buffer << data
         end
