@@ -12,7 +12,7 @@ LogMixer borrows concepts from an audio mixing board:
 Sample usage for logging an event stream and analyzing how many events per second are generated:
 
 ```ruby
-LM = LogMixer.new
+LM = LogMixer::LogMixer.new
 
 # Input and output 'channels' are Ruby IO objects
 LM.output :out,     STDOUT
@@ -34,11 +34,21 @@ LM.filter :events_per_min, 60 do |acc, data|
 end
 
 # 'Sends' route filtered data to channels
-LM.send(:events) { |data| LM.write :events, data.unparse }
-LM.send(:stats)  { |data| LM.write :out,    data.unparse }
+LM.send(:events)          { |data| LM.write :events, data.unparse }
+LM.send(:events_per_min)  { |data| LM.write :out,    data.unparse }
 
 # 'Receives' route raw data into the pipeline
 LM.receive(:tcp) do |msg|
   LM.log msg.strip.parse
 end
+
+# LogMixer takes Ruby hashes as data for logs
+loop do
+  LM.log(event: true, at: :start)
+  sleep(rand 10)
+  LM.log(event: true, at: :finish)  
+end
+
+# STDOUT has a stream of analyzed data, log/events.log is an archive of the full event stream 
 ```
+
