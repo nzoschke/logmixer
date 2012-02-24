@@ -4,21 +4,30 @@ require "./test/minitest_helper.rb"
 
 class TestParser < MiniTest::Unit::TestCase
   def test_parse_tags
+    # Value true => non key-value encoding
     data = { test: true, exec: true }
     assert_equal "test exec", data.unparse
-    assert_equal data, data.unparse.parse
+    assert_equal data.inspect, data.unparse.parse.inspect # order is preserved
   end
 
   def test_parse_numbers
+    # Numeric and Float are encoded and decoded
     data = { elapsed: 12.000000, __time: 0 }
     assert_equal "elapsed=12.000 __time=0", data.unparse
-    assert_equal data, data.unparse.parse
+    assert_equal data.inspect, data.unparse.parse.inspect
   end
 
   def test_parse_strings
+    # Strings are all single quoted, with ' or \ escaped
     data = { s1: 'echo \'hello\' "world"', s2: "hello world", s3: "slasher\\", s4: "hi" }
     assert_equal "s1='echo \\'hello\\' \"world\"' s2='hello world' s3='slasher\\\\' s4='hi'", data.unparse
-    assert_equal data, data.unparse.parse
+    assert_equal data.inspect, data.unparse.parse.inspect
+  end
+
+  def test_parse_constants
+    # Non-strings are not single quoted
+    data = { s1: :symbol, s2: LogMixer }
+    assert_equal "s1=symbol s2=LogMixer", data.unparse
   end
 end
 
