@@ -86,7 +86,8 @@ class TestFilter < MiniTest::Unit::TestCase
   include LogMixer
 
   def setup
-    @l = LogMixer.new
+    @l  = LogMixer.new
+    @io = []
   end
 
   def teardown
@@ -133,6 +134,8 @@ class TestFilter < MiniTest::Unit::TestCase
   end
 
   def test_filter_reduce
+    @l.send(:execs_per_min) { |data| @io << data }
+
     @l.filter :execs_per_min, 60 do |acc, log|
       next unless log.match(exec: true, at: :start)
       acc[:execs_per_min] = true
@@ -153,9 +156,12 @@ class TestFilter < MiniTest::Unit::TestCase
       { execs_per_min: true, num: 2, __time: 2,  __bin: 0 },
       { execs_per_min: true, num: 1, __time: 60, __bin: 1 }
     ], @l.filters[:execs_per_min][:buffer]
+
+    # bin 1 hasn't been sent yet
+    assert_equal @l.filters[:execs_per_min][:buffer][0, 1], @io
   end
 
-  def test_rereduce
+  def test_filter_rereduce
     @l1 = LogMixer.new
     @l2 = LogMixer.new
     @l3 = LogMixer.new
@@ -176,22 +182,28 @@ class TestFilter < MiniTest::Unit::TestCase
     @l2.send(:execs_per_min, &send)
 
     @l3.filter :execs_per_min, 60, &filter
+    @l3.send(:execs_per_min) { |data| @io << data }
 
     @l1.log(exec: true, at: :start,   __time: 0)
     @l1.log(exec: true, at: :finish,  __time: 1)
     @l1.log(exec: true, at: :start,   __time: 60)
     @l1.log(exec: true, at: :finish,  __time: 61)
+    @l1.log(exec: true, at: :start,   __time: 200) # 'flush' buffer
 
     @l2.log(exec: true, at: :start,   __time: 10)
     @l2.log(exec: true, at: :finish,  __time: 12)
     @l2.log(exec: true, at: :start,   __time: 125)
     @l2.log(exec: true, at: :finish,  __time: 126)
+    @l2.log(exec: true, at: :start,   __time: 200) # 'flush' buffer
 
-    assert_equal 2, @l1.filters[:execs_per_min][:buffer].length
-    assert_equal 2, @l2.filters[:execs_per_min][:buffer].length
+    assert_equal 3, @l1.filters[:execs_per_min][:buffer].length
+    assert_equal 3, @l2.filters[:execs_per_min][:buffer].length
 
     buffer = @l3.filters[:execs_per_min][:buffer]
     assert_equal [0, 1, 2], buffer.collect { |d| d[:__bin] }
     assert_equal [2, 1, 1], buffer.collect { |d| d[:num] }
+
+    # bin > 1 hasn't been sent yet
+    assert_equal @l3.filters[:execs_per_min][:buffer][0, 2], @io
   end
 end

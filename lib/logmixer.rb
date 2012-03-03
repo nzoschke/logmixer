@@ -24,21 +24,25 @@ module LogMixer
 
         bin = (data[:__time] / period.to_f).floor rescue -1
 
-        acc = buffer.detect { |d| d[:__bin] == bin }      # find accumulator
+        acc = buffer.detect { |d| d[:__bin] == bin }        # find accumulator
 
         args = [[], [data], [acc || { id => true }, data]]
-        if new_acc = blk.call(*args[blk.arity])           # update accumulator
+        if new_acc = blk.call(*args[blk.arity])             # update accumulator
           if blk.arity == 2
-            buffer << new_acc if acc.nil?                 # append if new accumulator
+            buffer << new_acc if acc.nil?                   # append if new accumulator
 
             new_acc.merge!(
               __time: data[:__time],
               __bin:  bin
             )
+
+            data = nil
+            data = buffer[-2] if acc.nil?                   # send previous if new accumulator
           else
             buffer << data
           end
 
+          next if !data
           next if !@sends[id]
 
           send_args = [[], [data], [buffer, data]]
