@@ -58,6 +58,14 @@ class TestLog < MiniTest::Unit::TestCase
     assert_equal({ foo: true, __time: 0 }, @last)
   end
 
+  def test_log_defaults
+    @l = LogMixer.new(logmixer: true)
+    @l.filter(:all)
+    @l.send(:all) { |data| @last = data }
+    @l.log(foo: true, __time: 0)
+    assert_equal({ logmixer: true, foo: true, __time: 0 }, @last)
+  end
+
   def test_log_timestamp
     @l.log(foo: true)
     assert @last.match(foo: true, __time: /.*/)

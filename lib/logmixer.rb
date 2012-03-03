@@ -4,7 +4,8 @@ module LogMixer
   class LogMixer
     attr_reader :filters
 
-    def initialize
+    def initialize(defaults={})
+      @defaults = defaults
       @channels = {}
       @filters  = {}
       @sends    = {}
@@ -14,6 +15,7 @@ module LogMixer
     end
 
     def log(*datas, &blk)
+      datas = [@defaults] + datas
       if blk
         start = Time.now
         log(*datas, { at: :start })
