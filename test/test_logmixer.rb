@@ -18,9 +18,22 @@ class TestParser < MiniTest::Unit::TestCase
   end
 
   def test_parse_strings
-    # Strings are all single quoted, with ' or \ escaped
-    data = { s1: 'echo \'hello\' "world"', s2: "hello world", s3: "slasher\\", s4: "hi" }
-    assert_equal "s1='echo \\'hello\\' \"world\"' s2='hello world' s3='slasher\\\\' s4='hi'", data.unparse
+    # Strings are all double quoted, with " or \ escaped
+    data = { s: "echo 'hello' \"world\"" }
+    assert_equal 's="echo \'hello\' \\"world\\""', data.unparse
+    assert_equal data.inspect, data.unparse.parse.inspect
+
+    data = { s: "hello world" }
+    assert_equal 's="hello world"', data.unparse
+    assert_equal data.inspect, data.unparse.parse.inspect
+
+    data = { s: "slasher\\" }
+    assert_equal 's="slasher\\\\"', data.unparse
+    assert_equal data.inspect, data.unparse.parse.inspect
+
+    # simple value is unquoted
+    data = { s: "hi" }
+    assert_equal 's=hi', data.unparse
     assert_equal data.inspect, data.unparse.parse.inspect
   end
 

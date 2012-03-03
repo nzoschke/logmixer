@@ -150,9 +150,9 @@ class Hash
         k.to_s
       elsif (v == false)
         "#{k}=false"
-      elsif v.is_a?(String)     # escape and quote val with ' or \ or multiple words
-        v = v.gsub(/\\|'/) { |c| "\\#{c}" }
-        "#{k}='#{v}'"
+      elsif v.is_a?(String) && v =~ /\\|\"| / # escape and quote val with " or \ or multiple words
+        v = v.gsub(/\\|"/) { |c| "\\#{c}" }
+        "#{k}=\"#{v}\""
       elsif v.is_a?(Float)
         "#{k}=#{format("%.3f", v)}"
       else
@@ -168,13 +168,13 @@ class String
     s     = self.dup
 
     patterns = [
-      /([^= ]+)='([^'\\]*(\\.[^'\\]*)*)'/,    # key='\'c-string\' escaped val'
+      /([^= ]+)="([^"\\]*(\\.[^"\\]*)*)"/,    # key="\"literal\" escaped val"
       /([^= ]+)=([^ =]+)/                     # key=value
     ]
     patterns.each do |p|
       s.scan(p) do |match|
         v = match[1]
-        v.gsub!(/\\'/, "'")                   # unescape \'
+        v.gsub!(/\\"/, '"')                   # unescape \"
         v.gsub!(/\\\\/, "\\")                 # unescape \\
 
         if v.to_i.to_s == v                   # cast value to int or float
