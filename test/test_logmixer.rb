@@ -44,6 +44,33 @@ class TestParser < MiniTest::Unit::TestCase
   end
 end
 
+class TestLog < MiniTest::Unit::TestCase
+  include LogMixer
+
+  def setup
+    @l = LogMixer.new
+    @l.filter(:all)
+    @l.send(:all) { |data| @last = data }
+  end
+
+  def test_log_data
+    @l.log(foo: true, __time: 0)
+    assert_equal({ foo: true, __time: 0 }, @last)
+  end
+
+  def test_log_timestamp
+    @l.log(foo: true)
+    assert @last.match(foo: true, __time: /.*/)
+  end
+
+  def test_log_block
+    @l.log(exec: true) do
+    end
+
+    assert @last.unparse =~ /exec at=finish elapsed=0.000 __time=/
+  end
+end
+
 class TestIO < MiniTest::Unit::TestCase
   include LogMixer
 

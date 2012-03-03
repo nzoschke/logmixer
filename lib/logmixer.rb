@@ -13,7 +13,15 @@ module LogMixer
       @mtx      = Mutex.new
     end
 
-    def log(*datas)
+    def log(*datas, &blk)
+      if blk
+        start = Time.now
+        log(*datas, { at: :start })
+        yield
+        log(*datas, { at: :finish, elapsed: Time.now - start })
+        return
+      end
+
       data = datas.inject(:merge)
       data[:__time] ||= Time.now.to_f
 
