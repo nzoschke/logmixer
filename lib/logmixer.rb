@@ -14,6 +14,10 @@ module LogMixer
       @mtx      = Mutex.new
     end
 
+    def reset
+      initialize(@defaults)
+    end
+
     def now
       Time.now
     end
