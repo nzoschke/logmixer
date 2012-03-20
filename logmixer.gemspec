@@ -4,7 +4,7 @@ require File.expand_path('../lib/logmixer/version', __FILE__)
 Gem::Specification.new do |gem|
   gem.authors       = ["Noah Zoschke"]
   gem.email         = ["noah@heroku.com"]
-  gem.description   = %q{Stateless log parsing routing, filtering and analysis}
+  gem.description   = %q{Stateless log parsing, routing, filtering and analysis}
   gem.summary       = %q{}
   gem.homepage      = ""
 
